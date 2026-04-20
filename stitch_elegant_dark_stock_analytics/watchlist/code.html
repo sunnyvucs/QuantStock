@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#001e2c",
+                    "surface-container-high": "#222a3d",
+                    "surface-container-lowest": "#060e20",
+                    "on-tertiary": "#00354a",
+                    "on-primary-fixed": "#002113",
+                    "secondary": "#ffb2b7",
+                    "on-surface-variant": "#bbcabf",
+                    "surface-bright": "#31394d",
+                    "background": "#0b1326",
+                    "inverse-primary": "#006c49",
+                    "outline": "#86948a",
+                    "surface-variant": "#2d3449",
+                    "on-primary-fixed-variant": "#005236",
+                    "on-surface": "#dae2fd",
+                    "surface-container-highest": "#2d3449",
+                    "on-background": "#dae2fd",
+                    "on-error": "#690005",
+                    "on-primary-container": "#00422b",
+                    "on-tertiary-fixed-variant": "#004c69",
+                    "tertiary": "#7bd0ff",
+                    "surface-dim": "#0b1326",
+                    "inverse-surface": "#dae2fd",
+                    "secondary-fixed-dim": "#ffb2b7",
+                    "primary": "#4edea3",
+                    "surface": "#0b1326",
+                    "inverse-on-surface": "#283044",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#7bd0ff",
+                    "secondary-fixed": "#ffdadb",
+                    "primary-container": "#10b981",
+                    "secondary-container": "#b50036",
+                    "tertiary-fixed": "#c4e7ff",
+                    "error-container": "#93000a",
+                    "primary-fixed-dim": "#4edea3",
+                    "error": "#ffb4ab",
+                    "surface-tint": "#4edea3",
+                    "on-secondary-container": "#ffc2c4",
+                    "on-secondary-fixed-variant": "#92002a",
+                    "on-primary": "#003824",
+                    "surface-container": "#171f33",
+                    "surface-container-low": "#131b2e",
+                    "on-tertiary-container": "#003e55",
+                    "on-secondary-fixed": "#40000d",
+                    "tertiary-container": "#19aee8",
+                    "on-secondary": "#67001b",
+                    "outline-variant": "#3c4a42",
+                    "primary-fixed": "#6ffbbe"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .sparkline-gradient {
+            background: linear-gradient(to bottom, rgba(78, 222, 163, 0.15) 0%, rgba(78, 222, 163, 0) 100%);
+        }
+        .sparkline-gradient-loss {
+            background: linear-gradient(to bottom, rgba(255, 178, 183, 0.15) 0%, rgba(255, 178, 183, 0) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 selection:text-primary min-h-screen pb-24">
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-[#131b2e]/70 backdrop-blur-md border-b border-[#3c4a42]/15 shadow-2xl shadow-[#060e20]/40">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/30">
+<img class="w-full h-full object-cover" data-alt="professional corporate headshot of a financial analyst in a dark suit with moody architectural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWnpfh1IFRt7hZAacCm7JNnx2r_mTK2hMS2Bv-rK_-Vp8En3WpKwxJTeolk-EgYIRiCBTQWTElQyEDP7Z6k6Hn4x4FmmBNRyVTzBcNxknVsAT496D9hf1YsTodDMUarzU3Wfb7o99_aTJ5MLFIMHfbHCNeMtJj_1KJ7AXbGeW2paS4bClph8iKSs3WXnXpdeU_vY_-lzisff3KOiDLi0FYCFZRPUj1toQ_a7j6mgMhtUVWAnVm2IvJv_wsm1L7uf2UiQaGPP0O8kAC"/>
+</div>
+<h1 class="text-xl font-black text-[#4edea3] uppercase tracking-widest">Precision Vault</h1>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-xl text-[#bbcabf] hover:bg-[#31394d] transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined">search</span>
+</button>
+<button class="p-2 rounded-xl text-[#bbcabf] hover:bg-[#31394d] transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-4 max-w-2xl mx-auto space-y-8">
+<!-- Header Section -->
+<div class="flex flex-col space-y-2">
+<span class="text-primary font-bold tracking-widest text-xs uppercase">Market Insight</span>
+<div class="flex justify-between items-end">
+<h2 class="text-3xl font-bold text-[#dae2fd] tracking-tight">Active Watchlist</h2>
+<button class="text-xs font-medium text-on-surface-variant flex items-center gap-1 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                    SORT BY GAIN
+                </button>
+</div>
+</div>
+<!-- Scrollable List Container -->
+<div class="space-y-3">
+<!-- Watchlist Item 1: Gain -->
+<div class="group relative bg-surface-container-low hover:bg-surface-container transition-all duration-300 p-4 rounded-xl border-l-2 border-primary shadow-sm hover:shadow-primary/5">
+<div class="flex items-center justify-between gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<div class="cursor-grab active:cursor-grabbing text-outline-variant hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-lg">drag_indicator</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-bold text-lg text-on-surface tracking-tight">NVDA</span>
+<span class="text-xs text-on-surface-variant truncate uppercase tracking-tighter font-medium">NVIDIA Corporation</span>
+</div>
+</div>
+<!-- Sparkline Concept -->
+<div class="hidden sm:flex flex-1 h-10 px-4 items-center">
+<div class="w-full h-full relative sparkline-gradient rounded-sm overflow-hidden">
+<svg class="w-full h-full stroke-primary fill-none stroke-[2]" viewbox="0 0 100 40">
+<path d="M0,35 Q10,30 20,32 T40,25 T60,20 T80,10 T100,5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+</svg>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<span class="font-bold text-on-surface">$875.28</span>
+<div class="flex items-center gap-1 text-primary text-xs font-bold px-2 py-0.5 bg-primary/10 rounded-lg shadow-[0_0_12px_rgba(78,222,163,0.15)]">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+                            +4.12%
+                        </div>
+</div>
+</div>
+</div>
+<!-- Watchlist Item 2: Loss -->
+<div class="group relative bg-surface-container-low hover:bg-surface-container transition-all duration-300 p-4 rounded-xl border-l-2 border-secondary/40 shadow-sm hover:shadow-secondary/5">
+<div class="flex items-center justify-between gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<div class="cursor-grab active:cursor-grabbing text-outline-variant hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-lg">drag_indicator</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-bold text-lg text-on-surface tracking-tight">AAPL</span>
+<span class="text-xs text-on-surface-variant truncate uppercase tracking-tighter font-medium">Apple Inc.</span>
+</div>
+</div>
+<div class="hidden sm:flex flex-1 h-10 px-4 items-center">
+<div class="w-full h-full relative sparkline-gradient-loss rounded-sm overflow-hidden">
+<svg class="w-full h-full stroke-secondary fill-none stroke-[2]" viewbox="0 0 100 40">
+<path d="M0,5 Q15,10 30,8 T50,15 T70,25 T85,20 T100,35" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+</svg>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<span class="font-bold text-on-surface">$172.62</span>
+<div class="flex items-center gap-1 text-secondary text-xs font-bold px-2 py-0.5 bg-secondary/10 rounded-lg shadow-[0_0_12px_rgba(255,178,183,0.15)]">
+<span class="material-symbols-outlined text-[14px]">trending_down</span>
+                            -0.85%
+                        </div>
+</div>
+</div>
+</div>
+<!-- Watchlist Item 3: Gain -->
+<div class="group relative bg-surface-container-low hover:bg-surface-container transition-all duration-300 p-4 rounded-xl border-l-2 border-primary shadow-sm hover:shadow-primary/5">
+<div class="flex items-center justify-between gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<div class="cursor-grab active:cursor-grabbing text-outline-variant hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-lg">drag_indicator</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-bold text-lg text-on-surface tracking-tight">TSLA</span>
+<span class="text-xs text-on-surface-variant truncate uppercase tracking-tighter font-medium">Tesla, Inc.</span>
+</div>
+</div>
+<div class="hidden sm:flex flex-1 h-10 px-4 items-center">
+<div class="w-full h-full relative sparkline-gradient rounded-sm overflow-hidden">
+<svg class="w-full h-full stroke-primary fill-none stroke-[2]" viewbox="0 0 100 40">
+<path d="M0,30 Q20,25 40,28 T60,15 T80,20 T100,5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+</svg>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<span class="font-bold text-on-surface">$175.79</span>
+<div class="flex items-center gap-1 text-primary text-xs font-bold px-2 py-0.5 bg-primary/10 rounded-lg shadow-[0_0_12px_rgba(78,222,163,0.15)]">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+                            +1.65%
+                        </div>
+</div>
+</div>
+</div>
+<!-- Watchlist Item 4: Minor Change -->
+<div class="group relative bg-surface-container-low hover:bg-surface-container transition-all duration-300 p-4 rounded-xl border-l-2 border-tertiary shadow-sm hover:shadow-tertiary/5">
+<div class="flex items-center justify-between gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<div class="cursor-grab active:cursor-grabbing text-outline-variant hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-lg">drag_indicator</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-bold text-lg text-on-surface tracking-tight">MSFT</span>
+<span class="text-xs text-on-surface-variant truncate uppercase tracking-tighter font-medium">Microsoft Corp</span>
+</div>
+</div>
+<div class="hidden sm:flex flex-1 h-10 px-4 items-center">
+<div class="w-full h-full relative bg-tertiary/5 rounded-sm overflow-hidden">
+<svg class="w-full h-full stroke-tertiary fill-none stroke-[2]" viewbox="0 0 100 40">
+<path d="M0,20 Q25,18 50,20 T75,22 T100,20" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+</svg>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<span class="font-bold text-on-surface">$417.88</span>
+<div class="flex items-center gap-1 text-tertiary text-xs font-bold px-2 py-0.5 bg-tertiary/10 rounded-lg shadow-[0_0_12px_rgba(123,208,255,0.15)]">
+<span class="material-symbols-outlined text-[14px]">trending_flat</span>
+                            +0.04%
+                        </div>
+</div>
+</div>
+</div>
+<!-- Watchlist Item 5: Loss -->
+<div class="group relative bg-surface-container-low hover:bg-surface-container transition-all duration-300 p-4 rounded-xl border-l-2 border-secondary/40 shadow-sm hover:shadow-secondary/5">
+<div class="flex items-center justify-between gap-4">
+<div class="flex items-center gap-4 min-w-0">
+<div class="cursor-grab active:cursor-grabbing text-outline-variant hover:text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-lg">drag_indicator</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-bold text-lg text-on-surface tracking-tight">AMZN</span>
+<span class="text-xs text-on-surface-variant truncate uppercase tracking-tighter font-medium">Amazon.com Inc</span>
+</div>
+</div>
+<div class="hidden sm:flex flex-1 h-10 px-4 items-center">
+<div class="w-full h-full relative sparkline-gradient-loss rounded-sm overflow-hidden">
+<svg class="w-full h-full stroke-secondary fill-none stroke-[2]" viewbox="0 0 100 40">
+<path d="M0,10 Q20,15 40,30 T60,35 T80,25 T100,32" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+</svg>
+</div>
+</div>
+<div class="flex flex-col items-end shrink-0">
+<span class="font-bold text-on-surface">$178.22</span>
+<div class="flex items-center gap-1 text-secondary text-xs font-bold px-2 py-0.5 bg-secondary/10 rounded-lg shadow-[0_0_12px_rgba(255,178,183,0.15)]">
+<span class="material-symbols-outlined text-[14px]">trending_down</span>
+                            -1.14%
+                        </div>
+</div>
+</div>
+</div>
+</div>
+<!-- FAB Container -->
+<button class="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-xl shadow-2xl flex items-center justify-center group active:scale-90 transition-all duration-150 z-40">
+<span class="material-symbols-outlined text-3xl group-hover:rotate-90 transition-transform duration-300">add</span>
+</button>
+</main>
+<!-- BottomNavBar Shell -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-[#131b2e]/80 backdrop-blur-lg border-t border-[#3c4a42]/10 shadow-[0_-8px_24px_rgba(6,14,32,0.5)] rounded-t-2xl">
+<a class="flex flex-col items-center justify-center text-[#bbcabf] opacity-60 hover:text-[#4edea3] hover:opacity-100 transition-all active:translate-y-[-2px] duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-tighter mt-1">Market</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#4edea3] bg-[#4edea3]/10 rounded-xl px-4 py-1 shadow-[0_0_12px_rgba(78,222,163,0.15)] active:translate-y-[-2px] duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-tighter mt-1">Watchlist</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#bbcabf] opacity-60 hover:text-[#4edea3] hover:opacity-100 transition-all active:translate-y-[-2px] duration-200" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-tighter mt-1">Portfolio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#bbcabf] opacity-60 hover:text-[#4edea3] hover:opacity-100 transition-all active:translate-y-[-2px] duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Inter'] text-[10px] font-medium uppercase tracking-tighter mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

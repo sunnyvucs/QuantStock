@@ -1,0 +1,24 @@
+{
+  "name": "quantstock-server",
+  "version": "1.0.0",
+  "description": "QuantStock Express Backend",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "csv-parse": "^5.5.3",
+    "yahoo-finance2": "^2.11.3",
+    "ml-random-forest": "^2.1.0",
+    "ml-matrix": "^6.10.7",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

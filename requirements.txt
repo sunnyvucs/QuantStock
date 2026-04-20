@@ -1,0 +1,9 @@
+# QuantStock Omni-Engine — requirements
+# Python 3.10+ recommended
+
+streamlit>=1.33.0
+pandas>=2.0.0
+numpy>=1.26.0
+yfinance>=0.2.38
+scikit-learn>=1.4.0
+xgboost>=2.0.0         # Optional — falls back to RandomForest if absent
