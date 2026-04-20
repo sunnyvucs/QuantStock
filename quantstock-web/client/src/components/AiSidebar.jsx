@@ -182,14 +182,32 @@ export default function AiSidebar({ data }) {
 
       {/* Verdict */}
       {verdict && (
-        <div style={{
-          margin: '0 14px', padding: '14px',
-          background: 'rgba(99,102,241,0.05)',
-          border: '1px solid rgba(99,102,241,0.15)',
-          borderRadius: 10, fontSize: 12, lineHeight: 1.8,
-          color: 'var(--text-primary)', whiteSpace: 'pre-wrap',
-        }}>
-          {verdict}
+        <div style={{ margin: '0 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {verdict.split(/\n(?=\*\*)|\n\n/).filter(p => p.trim()).map((para, i) => {
+            const headingMatch = para.match(/^\*\*(.+?)\*\*\n?([\s\S]*)/);
+            if (headingMatch) {
+              return (
+                <div key={i} style={{
+                  padding: '10px 12px',
+                  background: 'rgba(99,102,241,0.05)',
+                  border: '1px solid rgba(99,102,241,0.12)',
+                  borderRadius: 8,
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>
+                    {headingMatch[1]}
+                  </div>
+                  <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--text-primary)' }}>
+                    {headingMatch[2].trim()}
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={i} style={{ fontSize: 11, lineHeight: 1.7, color: 'var(--text-muted)', padding: '0 2px' }}>
+                {para.trim()}
+              </div>
+            );
+          })}
         </div>
       )}
 
