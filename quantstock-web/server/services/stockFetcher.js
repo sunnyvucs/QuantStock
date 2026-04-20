@@ -1,13 +1,4 @@
 import https from 'https';
-import { spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import path from 'path';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PYTHON_SCRIPT = path.join(__dirname, '..', 'scripts', 'fetch_fundamentals.py');
-
-// Try the venv python first, fall back to system python
-const PYTHON_BIN = 'python';
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -93,51 +84,10 @@ export async function fetchHistory(symbol) {
 }
 
 /**
- * Run the Python fetch_fundamentals.py script as a subprocess.
- * Uses yfinance (which handles Yahoo auth via curl_cffi) to get
- * marketCap, PE, ROE, and Debt/Equity.
- */
-function fetchInfoViaPython(symbol) {
-  return new Promise((resolve, reject) => {
-    let stdout = '';
-    let stderr = '';
-    const proc = spawn(PYTHON_BIN, [PYTHON_SCRIPT, symbol], { timeout: 30000 });
-    proc.stdout.on('data', d => { stdout += d; });
-    proc.stderr.on('data', d => { stderr += d; });
-    proc.on('close', code => {
-      const line = stdout.trim().split('\n').filter(l => l.startsWith('{')).pop();
-      if (!line) return reject(new Error(`Python script failed (code ${code}): ${stderr.slice(0, 200)}`));
-      try { resolve(JSON.parse(line)); }
-      catch (e) { reject(new Error('JSON parse error: ' + line.slice(0, 100))); }
-    });
-    proc.on('error', reject);
-  });
-}
-
-/**
- * Fetch fundamental info via Python/yfinance subprocess.
- * Falls back to NSE public API if Python is unavailable.
- * Returns: { name, marketCapCr (Crores), pe, roe (decimal or null), debtToEquity (ratio or null), currency }
+ * Fetch fundamental info via NSE public API + Tickertape.
+ * Returns: { name, marketCapCr (Crores), pe, roe, debtToEquity, currency }
  */
 export async function fetchInfo(symbol) {
-  // Primary: Python/yfinance — handles Yahoo auth correctly
-  try {
-    const raw = await fetchInfoViaPython(symbol);
-    if (raw.error) throw new Error(raw.error);
-    return {
-      name:         raw.name,
-      marketCapCr:  raw.marketCap ? raw.marketCap / 1e7 : null,  // raw INR → Crores
-      marketCap:    null,
-      pe:           raw.pe           ?? null,
-      roe:          raw.roe          ?? null,   // decimal e.g. 0.082
-      debtToEquity: raw.debtToEquity ?? null,   // plain ratio e.g. 0.997
-      currency:     raw.currency     || 'INR',
-    };
-  } catch (err) {
-    console.warn('Python fetchInfo failed, falling back to NSE API:', err.message);
-  }
-
-  // Fallback: NSE + Tickertape (no ROE/DE)
   const nseSymbol = symbol.replace(/\.(NS|BO)$/i, '').toUpperCase();
   const isIndian  = /\.(NS|BO)$/i.test(symbol);
 
