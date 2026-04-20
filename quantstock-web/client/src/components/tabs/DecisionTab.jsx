@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import InfoTooltip from '../ui/InfoTooltip';
+
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Animated circular arc for score display
 function ScoreRing({ score, color, size = 180 }) {
@@ -62,6 +65,15 @@ const WEIGHT_TIPS = {
 
 export default function DecisionTab({ data }) {
   const { decision, trend, rangeLevels, markov, ml } = data;
+  const [sentimentBadge, setSentimentBadge] = useState(null);
+
+  useEffect(() => {
+    if (!data.symbol) return;
+    setSentimentBadge(null);
+    axios.get(`${API}/sentiment`, { params: { symbol: data.symbol } })
+      .then(r => setSentimentBadge({ label: r.data.overallLabel, color: r.data.overallColor, score: r.data.overallScore }))
+      .catch(() => {});
+  }, [data.symbol]);
 
   if (!decision) return <div style={{ color: 'var(--text-secondary)' }}>No decision data.</div>;
 
@@ -109,6 +121,23 @@ export default function DecisionTab({ data }) {
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6 }}>
             Composite Score: {score.toFixed(1)} / 100
+          </div>
+          {/* Sentiment badge — loads async, shown when ready */}
+          <div style={{ marginTop: 10, minHeight: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>News Sentiment:</span>
+            {sentimentBadge ? (
+              <span style={{
+                padding: '3px 12px', borderRadius: 'var(--radius-pill)',
+                background: `${sentimentBadge.color}18`,
+                border: `1px solid ${sentimentBadge.color}40`,
+                color: sentimentBadge.color,
+                fontSize: 11, fontWeight: 700,
+              }}>
+                {sentimentBadge.label}
+              </span>
+            ) : (
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>fetching...</span>
+            )}
           </div>
         </div>
 
@@ -300,6 +329,7 @@ export default function DecisionTab({ data }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { finalDecision } from '../services/finalDecision.js';
 import { cagrProjection } from '../services/cagrProjection.js';
 import { trainAndEval } from '../services/mlModel.js';
 import { fetchSentiment } from '../services/sentimentFetcher.js';
+import { runAiAnalysis } from '../services/aiAnalysis.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -181,6 +182,27 @@ router.post('/analyse-csv', upload.single('file'), async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('/api/analyse-csv error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/ai-ping', async (req, res) => {
+  try {
+    await runAiAnalysis({ _ping: true }, null);
+    res.json({ available: true });
+  } catch {
+    res.status(503).json({ available: false });
+  }
+});
+
+router.post('/ai-analyse', async (req, res) => {
+  const { analysisData, sentiment } = req.body;
+  if (!analysisData) return res.status(400).json({ error: 'analysisData is required' });
+  try {
+    const verdict = await runAiAnalysis(analysisData, sentiment || null);
+    res.json({ verdict });
+  } catch (err) {
+    console.error('/api/ai-analyse error:', err);
     res.status(500).json({ error: err.message });
   }
 });

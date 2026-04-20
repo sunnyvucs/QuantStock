@@ -13,6 +13,7 @@ import DecisionTab from './components/tabs/DecisionTab';
 import RawDataTab from './components/tabs/RawDataTab';
 import SentimentTab from './components/tabs/SentimentTab';
 import { downloadReport } from './services/generateReport';
+import AiSidebar from './components/AiSidebar';
 
 const QUICK_SYMBOLS = [
   { symbol: 'TCS.NS', label: 'TCS' },
@@ -211,8 +212,12 @@ export default function App() {
       </header>
 
       {/* ─── Main layout ─────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 20px', position: 'relative', zIndex: 1 }}>
-        <style>{`.hide-sm { display: none !important; } @media (max-width: 600px) { .params-bar { flex-wrap: wrap !important; } }`}</style>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 20px', position: 'relative', zIndex: 1 }}>
+        <style>{`
+          .hide-sm { display: none !important; }
+          @media (max-width: 600px) { .params-bar { flex-wrap: wrap !important; } }
+          @media (max-width: 900px) { .main-with-sidebar { flex-direction: column !important; } .ai-sidebar-col { width: 100% !important; position: static !important; } }
+        `}</style>
 
         {/* ─── Main content ─────────────────────────────────────────────────── */}
         <main style={{ minWidth: 0 }}>
@@ -340,7 +345,10 @@ export default function App() {
 
           {/* Analysis result */}
           {analysisData && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeIn 0.3s ease' }}>
+            <div className="main-with-sidebar" style={{ display: 'flex', gap: 20, alignItems: 'flex-start', animation: 'fadeIn 0.3s ease' }}>
+
+            {/* ── Left: main analysis column ── */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Stock header row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -447,6 +455,12 @@ export default function App() {
                 {activeTab === 'sentiment' && <SentimentTab symbol={analysisData.symbol} />}
                 {activeTab === 'rawdata'   && <RawDataTab data={analysisData} />}
               </div>
+            </div>
+            {/* ── Right: AI sidebar ── */}
+            <div className="ai-sidebar-col" style={{ width: 260, flexShrink: 0 }}>
+              <AiSidebar data={analysisData} />
+            </div>
+
             </div>
           )}
         </main>
