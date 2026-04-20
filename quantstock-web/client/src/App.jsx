@@ -11,6 +11,8 @@ import MarkovTab from './components/tabs/MarkovTab';
 import MLTab from './components/tabs/MLTab';
 import DecisionTab from './components/tabs/DecisionTab';
 import RawDataTab from './components/tabs/RawDataTab';
+import SentimentTab from './components/tabs/SentimentTab';
+import { downloadReport } from './services/generateReport';
 
 const QUICK_SYMBOLS = [
   { symbol: 'TCS.NS', label: 'TCS' },
@@ -350,7 +352,7 @@ export default function App() {
                     {analysisData.lastBar?.date}
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)' }}>
                     ₹{analysisData.price?.toFixed(2)}
                   </span>
@@ -364,6 +366,27 @@ export default function App() {
                       {analysisData.lastBar.ret1d >= 0 ? '+' : ''}{analysisData.lastBar.ret1d.toFixed(2)}%
                     </span>
                   )}
+                  <button
+                    onClick={() => downloadReport(analysisData)}
+                    title="Download full plain-English analysis report as a text file"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '6px 14px',
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      borderRadius: 8, color: 'var(--text-secondary)',
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      transition: 'var(--transition)',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Download Report
+                  </button>
                 </div>
               </div>
 
@@ -421,6 +444,7 @@ export default function App() {
                 {activeTab === 'markov'    && <MarkovTab data={analysisData} />}
                 {activeTab === 'ml'        && <MLTab data={analysisData} />}
                 {activeTab === 'decision'  && <DecisionTab data={analysisData} />}
+                {activeTab === 'sentiment' && <SentimentTab symbol={analysisData.symbol} />}
                 {activeTab === 'rawdata'   && <RawDataTab data={analysisData} />}
               </div>
             </div>

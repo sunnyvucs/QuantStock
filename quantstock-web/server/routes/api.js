@@ -11,6 +11,7 @@ import { calcTrend } from '../services/trendScore.js';
 import { finalDecision } from '../services/finalDecision.js';
 import { cagrProjection } from '../services/cagrProjection.js';
 import { trainAndEval } from '../services/mlModel.js';
+import { fetchSentiment } from '../services/sentimentFetcher.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -180,6 +181,18 @@ router.post('/analyse-csv', upload.single('file'), async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('/api/analyse-csv error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/sentiment', async (req, res) => {
+  const { symbol } = req.query;
+  if (!symbol) return res.status(400).json({ error: 'symbol is required' });
+  try {
+    const result = await fetchSentiment(symbol.trim());
+    res.json(result);
+  } catch (err) {
+    console.error('/api/sentiment error:', err);
     res.status(500).json({ error: err.message });
   }
 });
