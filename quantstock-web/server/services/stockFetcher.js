@@ -84,42 +84,12 @@ export async function fetchHistory(symbol) {
 }
 
 /**
- * Fetch fundamental info via NSE + Tickertape + Yahoo Finance search/chart APIs.
- * Returns: { name, sector, industry, marketCapCr, pe, roe, debtToEquity,
- *            fiftyTwoWeekHigh, fiftyTwoWeekLow, currency }
+ * Fetch fundamental info via NSE public API + Tickertape.
+ * Returns: { name, marketCapCr (Crores), pe, roe, debtToEquity, currency }
  */
 export async function fetchInfo(symbol) {
   const nseSymbol = symbol.replace(/\.(NS|BO)$/i, '').toUpperCase();
   const isIndian  = /\.(NS|BO)$/i.test(symbol);
-
-  // Yahoo Finance search API — returns sector, industry, longName (no crumb needed)
-  let sector = null, industry = null, yahooName = null;
-  try {
-    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=1&newsCount=0`;
-    const searchData = await httpsGet(searchUrl);
-    const q = searchData?.finance?.result?.[0]?.quotes?.[0]
-           || searchData?.quotes?.[0]
-           || null;
-    if (q?.symbol?.toUpperCase() === symbol.toUpperCase() || q?.symbol?.startsWith(nseSymbol)) {
-      sector    = q.sectorDisp || q.sector || null;
-      industry  = q.industryDisp || q.industry || null;
-      yahooName = q.longname || q.shortname || null;
-    }
-  } catch (e) {
-    console.error('Yahoo search fetch failed:', e.message);
-  }
-
-  // Yahoo Finance chart meta — returns 52W high/low (already fetched in fetchHistory but reuse here)
-  let fiftyTwoWeekHigh = null, fiftyTwoWeekLow = null;
-  try {
-    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
-    const chartData = await httpsGet(chartUrl);
-    const meta = chartData?.chart?.result?.[0]?.meta || {};
-    fiftyTwoWeekHigh = meta.fiftyTwoWeekHigh ?? null;
-    fiftyTwoWeekLow  = meta.fiftyTwoWeekLow  ?? null;
-  } catch (e) {
-    console.error('Yahoo chart meta fetch failed:', e.message);
-  }
 
   if (isIndian) {
     try {
@@ -132,39 +102,23 @@ export async function fetchInfo(symbol) {
       const ttStock = tt?.data?.stocks?.find(s => s.ticker === nseSymbol) ?? tt?.data?.stocks?.[0];
       let marketCapCr = ttStock?.marketCap ?? null;
       if (!marketCapCr) {
-        const price  = nse?.priceInfo?.lastPrice ?? null;
+        const price = nse?.priceInfo?.lastPrice ?? null;
         const shares = nse?.securityInfo?.issuedSize ?? null;
         if (price && shares) marketCapCr = (price * shares) / 1e7;
       }
       return {
-        name:             nse?.info?.companyName ?? yahooName ?? nseSymbol,
-        sector,
-        industry,
+        name:         nse?.info?.companyName ?? nseSymbol,
         marketCapCr,
-        marketCap:        null,
-        pe:               nse?.metadata?.pdSymbolPe ?? null,
-        roe:              null,
-        debtToEquity:     null,
-        fiftyTwoWeekHigh,
-        fiftyTwoWeekLow,
-        currency:         'INR',
+        marketCap:    null,
+        pe:           nse?.metadata?.pdSymbolPe ?? null,
+        roe:          null,
+        debtToEquity: null,
+        currency:     'INR',
       };
     } catch (e) {
       console.error('NSE fallback failed:', e.message);
     }
   }
 
-  return {
-    name: yahooName || symbol,
-    sector,
-    industry,
-    marketCapCr:      null,
-    marketCap:        null,
-    pe:               null,
-    roe:              null,
-    debtToEquity:     null,
-    fiftyTwoWeekHigh,
-    fiftyTwoWeekLow,
-    currency:         'INR',
-  };
+  return null;
 }
