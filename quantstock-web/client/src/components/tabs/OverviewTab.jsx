@@ -112,6 +112,8 @@ export default function OverviewTab({ data }) {
     { label: 'P/E Ratio',     value: fundamentals.pe != null ? fmtNum(fundamentals.pe, 1) : 'N/A' },
     { label: 'ROE',           value: fundamentals.roe != null ? `${fmtNum(fundamentals.roe * 100, 1)}%` : 'N/A' },
     { label: 'Debt / Equity', value: fundamentals.debtToEquity != null ? fmtNum(fundamentals.debtToEquity, 2) : 'N/A' },
+    { label: '52W High',      value: fundamentals.fiftyTwoWeekHigh != null ? `₹${fmtNum(fundamentals.fiftyTwoWeekHigh)}` : 'N/A' },
+    { label: '52W Low',       value: fundamentals.fiftyTwoWeekLow  != null ? `₹${fmtNum(fundamentals.fiftyTwoWeekLow)}`  : 'N/A' },
   ] : [];
 
   return (
@@ -161,10 +163,35 @@ export default function OverviewTab({ data }) {
       <div className="card" style={{ padding: '16px 18px' }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           Fundamentals
-          <InfoTooltip title="Fundamental Data" desc="Company financial metrics from Yahoo Finance. ROE and Debt/Equity may not be available for all stocks via the public API." />
+          <InfoTooltip title="Fundamental Data" desc="Company financial metrics sourced from Yahoo Finance and NSE." />
         </div>
+
+        {/* Sector / Industry pills */}
+        {(fundamentals?.sector || fundamentals?.industry) && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            {fundamentals.sector && (
+              <span style={{
+                padding: '3px 12px', borderRadius: 'var(--radius-pill)',
+                background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.25)',
+                fontSize: 11, fontWeight: 600, color: 'var(--accent)',
+              }}>
+                {fundamentals.sector}
+              </span>
+            )}
+            {fundamentals.industry && (
+              <span style={{
+                padding: '3px 12px', borderRadius: 'var(--radius-pill)',
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                fontSize: 11, color: 'var(--text-secondary)',
+              }}>
+                {fundamentals.industry}
+              </span>
+            )}
+          </div>
+        )}
+
         {fundRows.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
             {fundRows.map(f => (
               <div key={f.label} style={{
                 padding: '10px 12px', background: 'var(--surface-2)',
@@ -180,7 +207,7 @@ export default function OverviewTab({ data }) {
           </div>
         ) : (
           <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0' }}>
-            Fundamental data is only available for Yahoo Finance stocks (not CSV uploads). ROE and Debt/Equity require a paid data source.
+            Fundamental data is only available for Yahoo Finance stocks (not CSV uploads).
           </div>
         )}
       </div>
