@@ -20,21 +20,50 @@ function httpsGet(url, extraHeaders = {}) {
 
 /**
  * Search for stocks using Yahoo Finance autocomplete API.
+ * Runs parallel queries for plain query + .NS and .BO variants to surface Indian stocks.
  */
 export async function searchStocks(query) {
+  const q = query.trim();
+  const alreadyHasSuffix = /\.(NS|BO)$/i.test(q);
+
+  const queries = [q];
+  if (!alreadyHasSuffix) {
+    queries.push(`${q}.NS`, `${q}.BO`);
+  }
+
   try {
-    const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0&listsCount=0`;
-    const data = await httpsGet(url);
-    const quotes = data?.finance?.result?.[0]?.quotes || data?.quotes || [];
-    return quotes
-      .filter(q => q.symbol)
-      .slice(0, 10)
-      .map(q => ({
-        symbol: q.symbol,
-        name: q.longname || q.shortname || q.symbol,
-        exchange: q.exchDisp || q.exchange || '',
-        quoteType: q.quoteType || '',
-      }));
+    const results = await Promise.allSettled(
+      queries.map(term =>
+        httpsGet(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(term)}&quotesCount=8&newsCount=0&listsCount=0`)
+      )
+    );
+
+    const seen = new Set();
+    const merged = [];
+
+    for (const r of results) {
+      if (r.status !== 'fulfilled') continue;
+      const quotes = r.value?.finance?.result?.[0]?.quotes || r.value?.quotes || [];
+      for (const q of quotes) {
+        if (!q.symbol || seen.has(q.symbol)) continue;
+        seen.add(q.symbol);
+        merged.push({
+          symbol: q.symbol,
+          name: q.longname || q.shortname || q.symbol,
+          exchange: q.exchDisp || q.exchange || '',
+          quoteType: q.quoteType || '',
+        });
+      }
+    }
+
+    // Sort: NSE/BSE results first
+    merged.sort((a, b) => {
+      const aInd = /\.(NS|BO)$/.test(a.symbol) ? 0 : 1;
+      const bInd = /\.(NS|BO)$/.test(b.symbol) ? 0 : 1;
+      return aInd - bInd;
+    });
+
+    return merged.slice(0, 10);
   } catch (err) {
     console.error('searchStocks error:', err.message);
     return [];
@@ -86,6 +115,7 @@ export async function fetchHistory(symbol) {
 /**
  * Fetch fundamental info via NSE public API + Tickertape.
  * Returns: { name, marketCapCr (Crores), pe, roe, debtToEquity, currency }
+ * Note: roe and debtToEquity are not available from free Indian data sources.
  */
 export async function fetchInfo(symbol) {
   const nseSymbol = symbol.replace(/\.(NS|BO)$/i, '').toUpperCase();
@@ -102,7 +132,7 @@ export async function fetchInfo(symbol) {
       const ttStock = tt?.data?.stocks?.find(s => s.ticker === nseSymbol) ?? tt?.data?.stocks?.[0];
       let marketCapCr = ttStock?.marketCap ?? null;
       if (!marketCapCr) {
-        const price = nse?.priceInfo?.lastPrice ?? null;
+        const price  = nse?.priceInfo?.lastPrice ?? null;
         const shares = nse?.securityInfo?.issuedSize ?? null;
         if (price && shares) marketCapCr = (price * shares) / 1e7;
       }

@@ -1,7 +1,7 @@
 import http from 'http';
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemma4:31b-cloud';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen3:4b';
 
 function buildMessages(analysis, sentiment) {
   const { name, symbol, price, lastBar, decision, trend, markov, rangeLevels: rl, tradePlan: tp, ml, fundamentals } = analysis;
@@ -40,6 +40,8 @@ Format your response with exactly these 5 bold headings (one short paragraph eac
 
 End with exactly this line: "⚠️ This analysis is for educational purposes only and does not constitute financial advice."`;
 
+  const markovBullPct = markov?.bullP != null ? fmt(markov.bullP * 100, 1) : 'N/A';
+
   const userPrompt = `Analyse this Indian stock for me:
 
 STOCK: ${name} (${symbol})
@@ -52,8 +54,10 @@ TECHNICAL SIGNALS:
 - MACD: ${macdNote}
 - Moving Averages: Price is ${maNote}
 - Pivot Bias: ${rl?.bias} (price is ${fmt(Math.abs(rl?.pivotPct))}% ${rl?.pivotPct >= 0 ? 'above' : 'below'} pivot point)
-- Markov Model: ${fmt(markov?.upProb * 100, 1)}% historical probability of UP next session → ${markov?.bias}
-${ml ? `- ML Model (Random Forest): ${fmt(ml.latestP * 100, 1)}% probability UP → ${ml.latestP > 0.5 ? 'Bullish' : 'Bearish'}` : '- ML Model: Not enabled this run'}
+- Markov Model: ${markovBullPct}% historical probability of a bullish next session → ${markov?.bias}
+${ml ? `- ML Ensemble (RF+XGBoost+LR+LSTM): ${fmt(ml.latestP * 100, 1)}% UP probability → ${ml.latestP > 0.5 ? 'Bullish' : 'Bearish'}
+  Ensemble Accuracy: ${ml.acc != null ? fmt(ml.acc * 100, 1) + '%' : 'N/A'} | Precision: ${ml.prec != null ? fmt(ml.prec * 100, 1) + '%' : 'N/A'} | Recall: ${ml.rec != null ? fmt(ml.rec * 100, 1) + '%' : 'N/A'}
+  Per-model: ${ml.models ? Object.entries(ml.models).map(([k, v]) => `${k.toUpperCase()} ${fmt(v * 100, 1)}%`).join(' | ') : 'N/A'}` : '- ML Ensemble: Not run yet'}
 
 TRADE PLAN:
 - Target Price: Rs.${fmt(tp?.targetPrice)} (+${fmt((tp?.targetPrice - price) / price * 100)}% upside → profit Rs.${fmt(tp?.profit, 0)})
@@ -88,7 +92,7 @@ export async function runAiAnalysis(analysis, sentiment) {
     model: OLLAMA_MODEL,
     messages,
     stream: false,
-    options: { temperature: 0.4, num_predict: 700 },
+    options: { temperature: 0.4, num_predict: 2000 },
   });
 
   return new Promise((resolve, reject) => {
@@ -105,10 +109,11 @@ export async function runAiAnalysis(analysis, sentiment) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          const text = json.message?.content || json.response || '';
-          // Strip any <think>...</think> reasoning blocks
-          const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-          resolve(clean);
+          // Some models (kimi, qwen3 thinking) put the answer in `thinking` when content is empty
+          const raw = json.message?.content || json.message?.thinking || json.response || '';
+          const clean = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          if (!clean) reject(new Error('Empty response from model'));
+          else resolve(clean);
         } catch {
           reject(new Error('Failed to parse Ollama response'));
         }

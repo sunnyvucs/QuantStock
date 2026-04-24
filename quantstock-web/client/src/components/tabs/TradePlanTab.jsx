@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
 import InfoTooltip from '../ui/InfoTooltip';
+import { TARGET_HORIZONS } from '../../services/investmentPlan';
+
+function fmtPctInt(v) {
+  const num = Number(v);
+  if (!Number.isFinite(num)) return '—';
+  return `${Math.round(num * 100)}%`;
+}
 
 function fmt(v, dec = 2) {
   if (v == null) return '—';
@@ -55,11 +62,11 @@ function LabelTip({ label, ...tip }) {
   return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>{label}<InfoTooltip {...tip} /></span>;
 }
 
-const HORIZONS = ['1M', '3M', '6M', '12M', '36M'];
-const HORIZON_LABELS = { '1M': '1 Month', '3M': '3 Months', '6M': '6 Months', '12M': '1 Year', '36M': '3 Years' };
+const HORIZONS = ['1M', '2M', '3M', '6M', '12M', '36M'];
+const HORIZON_LABELS = { '1M': '1 Month', '2M': '2 Months', '3M': '3 Months', '6M': '6 Months', '12M': '1 Year', '36M': '3 Years' };
 
 export default function TradePlanTab({ data }) {
-  const { tradePlan: tp, cagrData, price } = data;
+  const { tradePlan: tp, cagrData, price, targetFeasibility, userGoal } = data;
   const [horizon, setHorizon] = useState('12M');
 
   if (!tp) return <div style={{ color: 'var(--text-secondary)' }}>No trade plan data.</div>;
@@ -69,9 +76,105 @@ export default function TradePlanTab({ data }) {
   const projPrice = cagrData?.projections?.[horizon];
   const projReturn = projPrice != null ? ((projPrice - price) / price * 100) : null;
   const cagr = cagrData?.cagr;
+  const selectedFeasibility = targetFeasibility?.horizons?.find(h => h.key === horizon) || targetFeasibility?.horizons?.[0];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {targetFeasibility?.summary && (
+        <div className="card" style={{ padding: 20 }}>
+          <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: targetFeasibility.summary.verdictColor }}>
+            Target Feasibility
+          </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+            <div style={{ padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Goal</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {userGoal?.targetPct?.toFixed?.(1) ?? userGoal?.targetPct}% return
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                Profit target {fmtINR(userGoal?.targetProfit || 0, 0)}
+              </div>
+            </div>
+            <div style={{ padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Current Verdict</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: targetFeasibility.summary.verdictColor }}>
+                {targetFeasibility.summary.verdict}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                Confidence {targetFeasibility.confidenceScore}/100
+              </div>
+            </div>
+            <div style={{ padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Likely Time To Target</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {targetFeasibility.summary.likelyMonths != null ? `${targetFeasibility.summary.likelyMonths.toFixed(1)} months` : 'Not reliable'}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                Typical time when the target was actually reached
+              </div>
+            </div>
+            <div style={{ padding: '12px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Short-Term Chances</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {fmtPctInt(targetFeasibility.summary.oneMonthHitRate)} in 1M
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                {fmtPctInt(targetFeasibility.summary.twoMonthHitRate)} in 2M
+              </div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 14 }}>
+            {targetFeasibility.summary.verdictText}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10 }}>
+            {TARGET_HORIZONS.map(item => {
+              const stat = targetFeasibility.horizons.find(h => h.key === item.key);
+              const hitRate = stat ? stat.hitRate * 100 : null;
+              return (
+                <div key={item.key} style={{
+                  padding: '12px 14px', background: 'var(--surface-2)',
+                  borderRadius: 10, border: `1px solid ${item.key === horizon ? 'var(--accent)' : 'var(--border)'}`,
+                }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{item.label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: hitRate >= 60 ? 'var(--success)' : hitRate >= 40 ? 'var(--warning)' : 'var(--danger)' }}>
+                    {hitRate != null ? `${hitRate.toFixed(0)}%` : '—'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                    historical hit rate
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {selectedFeasibility && (
+            <div style={{
+              marginTop: 16, padding: '12px 14px', background: 'var(--surface-2)',
+              borderRadius: 10, border: '1px solid var(--border)',
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                What {HORIZON_LABELS[horizon]} usually looked like
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.7 }}>
+                {fmtPctInt(selectedFeasibility.hitRate)} of similar historical entry windows reached the target within {HORIZON_LABELS[horizon]}.{' '}
+                {selectedFeasibility.hitRate >= 0.6 ? 'Historically this horizon has been supportive for the target.' : selectedFeasibility.hitRate >= 0.4 ? 'Historically this horizon has been mixed for the target.' : 'Historically this horizon has been weak for the target.'}
+                {' '}
+                {selectedFeasibility.medianMonthsToHit != null
+                  ? `When the target was reached, the median time was ${selectedFeasibility.medianMonthsToHit.toFixed(1)} months.`
+                  : 'The target was not reached often enough in this horizon to estimate timing confidently.'}
+                {' '}
+                {selectedFeasibility.medianHitDrawdownPct != null
+                  ? `Before the outcome, the median drawdown was ${selectedFeasibility.medianHitDrawdownPct.toFixed(1)}%.`
+                  : ''}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 3 cards grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}
         className="trade-grid">

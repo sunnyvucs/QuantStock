@@ -63,8 +63,193 @@ const WEIGHT_TIPS = {
   'ML Model':     { title: 'ML Model Weight (40%)', desc: 'Contribution of the Random Forest up-probability. The model\'s predicted probability of an up session is used directly as the sub-score. Highest weight as it is the most data-driven signal.', formula: 'Contribution = ml.upProbability × 100 × 0.40' },
 };
 
-export default function DecisionTab({ data }) {
+// ─── Next Day Forecast card ───────────────────────────────────────────────────
+function NextDayForecast({ forecast, mlProb }) {
+  if (!forecast) return null;
+
+  const dirColor =
+    forecast.direction === 'Up'   ? 'var(--success)' :
+    forecast.direction === 'Down' ? 'var(--danger)'  : 'var(--warning)';
+
+  const dirArrow =
+    forecast.direction === 'Up'   ? '▲' :
+    forecast.direction === 'Down' ? '▼' : '▶';
+
+  const confColor =
+    forecast.confidence === 'High'   ? 'var(--success)' :
+    forecast.confidence === 'Medium' ? 'var(--warning)'  : 'var(--danger)';
+
+  // Synthesise ML signal into direction text
+  let mlLabel = null;
+  if (mlProb != null) {
+    if      (mlProb >= 0.65) mlLabel = { text: `${(mlProb * 100).toFixed(0)}% UP probability`, color: 'var(--success)' };
+    else if (mlProb <= 0.35) mlLabel = { text: `${((1 - mlProb) * 100).toFixed(0)}% DOWN probability`, color: 'var(--danger)' };
+    else                     mlLabel = { text: `${(mlProb * 100).toFixed(0)}% (neutral zone)`, color: 'var(--warning)' };
+  }
+
+  return (
+    <div className="card" style={{
+      padding: 20,
+      border: `1px solid ${dirColor}30`,
+      background: `linear-gradient(135deg, var(--surface), ${dirColor}06)`,
+    }}>
+      <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+        Tomorrow's Outlook
+        <span style={{
+          marginLeft: 'auto', fontSize: 11, fontWeight: 700,
+          color: confColor,
+          background: `${confColor}18`,
+          border: `1px solid ${confColor}40`,
+          padding: '2px 10px', borderRadius: 'var(--radius-pill)',
+        }}>
+          {forecast.confidence} Confidence
+        </span>
+      </h3>
+
+      {/* Main direction row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ fontSize: 40, fontWeight: 800, color: dirColor, lineHeight: 1 }}>
+            {dirArrow}
+          </span>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: dirColor }}>{forecast.direction}</div>
+            {forecast.expRet != null && (
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Expected: {forecast.expRet > 0 ? '+' : ''}{forecast.expRet.toFixed(2)}%
+              </div>
+            )}
+          </div>
+        </div>
+
+        {forecast.expClose != null && (
+          <div style={{ padding: '10px 16px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>Markov Expected Close</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
+              ₹{forecast.expClose.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ML + Range row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
+        {mlLabel && (
+          <div style={{ padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>ML Model</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: mlLabel.color }}>{mlLabel.text}</div>
+          </div>
+        )}
+        {forecast.expH != null && forecast.expL != null && (
+          <div style={{ padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Expected Range (ATR)</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>
+              <span style={{ color: 'var(--danger)' }}>L ₹{forecast.expL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span style={{ color: 'var(--text-muted)', margin: '0 6px' }}>—</span>
+              <span style={{ color: 'var(--success)' }}>H ₹{forecast.expH.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+        )}
+        {forecast.bullP != null && (
+          <div style={{ padding: '10px 14px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Markov Probabilities</div>
+            <div style={{ fontSize: 13 }}>
+              <span style={{ color: 'var(--success)', fontWeight: 600 }}>Bull {(forecast.bullP * 100).toFixed(0)}%</span>
+              <span style={{ color: 'var(--text-muted)', margin: '0 6px' }}>·</span>
+              <span style={{ color: 'var(--danger)', fontWeight: 600 }}>Bear {(forecast.bearP * 100).toFixed(0)}%</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Signal agreement bar */}
+      <div>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>Signal Agreement</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            { label: 'Markov', bias: forecast.markovBias },
+            { label: 'Range',  bias: forecast.rangeBias  },
+            { label: 'ML',     bias: mlProb != null ? (mlProb > 0.5 ? 'Bullish' : 'Bearish') : null },
+          ].map(({ label, bias }) => {
+            const c = bias === 'Bullish' ? 'var(--success)' : bias === 'Bearish' ? 'var(--danger)' : 'var(--text-muted)';
+            return (
+              <div key={label} style={{
+                flex: 1, padding: '6px 10px', borderRadius: 8, textAlign: 'center',
+                background: bias ? `${c}18` : 'var(--surface-2)',
+                border: `1px solid ${bias ? `${c}40` : 'var(--border)'}`,
+                fontSize: 11, fontWeight: 600, color: bias ? c : 'var(--text-muted)',
+              }}>
+                <div style={{ marginBottom: 2, color: 'var(--text-secondary)', fontWeight: 400 }}>{label}</div>
+                {bias ?? '—'}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Goal Score card ──────────────────────────────────────────────────────────
+function GoalScoreCard({ goalScore }) {
+  if (!goalScore) return null;
+  const { score, label, color, factors } = goalScore;
+  return (
+    <div className="card" style={{
+      padding: 20,
+      border: `1px solid ${color}30`,
+      background: `linear-gradient(135deg, var(--surface), ${color}06)`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <h3 style={{ fontSize: 13, fontWeight: 600 }}>
+          Goal Assessment
+        </h3>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ fontSize: 28, fontWeight: 800, color }}>{score}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>/ 100</span>
+          <span style={{
+            padding: '3px 12px', borderRadius: 'var(--radius-pill)',
+            background: `${color}18`, border: `1px solid ${color}40`,
+            fontSize: 12, fontWeight: 700, color,
+          }}>{label}</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {factors.map((f, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ width: 130, fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>{f.label}</span>
+            <div style={{ flex: 1, height: 6, background: 'var(--surface-3)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', width: `${Math.max(0, Math.min(100, f.score))}%`,
+                background: f.score >= 60 ? 'var(--success)' : f.score >= 40 ? 'var(--warning)' : 'var(--danger)',
+                borderRadius: 3, opacity: 0.8, transition: 'width 0.6s ease',
+              }} />
+            </div>
+            <span style={{ width: 50, fontSize: 12, color: 'var(--text-secondary)', textAlign: 'right' }}>{f.value}</span>
+            <span style={{
+              width: 36, fontSize: 11, color: 'var(--accent)',
+              background: 'var(--accent-soft)', padding: '1px 6px',
+              borderRadius: 'var(--radius-pill)', textAlign: 'center',
+            }}>{f.weight}</span>
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: '1px 8px',
+              borderRadius: 'var(--radius-pill)',
+              color: f.score >= 60 ? 'var(--success)' : f.score >= 40 ? 'var(--warning)' : 'var(--danger)',
+              background: f.score >= 60 ? 'rgba(74,222,128,0.1)' : f.score >= 40 ? 'rgba(251,191,36,0.1)' : 'rgba(248,113,113,0.1)',
+            }}>{f.verdict}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function DecisionTab({ data, mlStatus }) {
   const { decision, trend, rangeLevels, markov, ml } = data;
+  const mlPending = mlStatus && mlStatus !== 'done' && mlStatus !== 'error';
+  const mlStatusLabel = mlStatus?.startsWith('running: ')
+    ? mlStatus.slice(9)
+    : 'Awaiting ML models…';
   const [sentimentBadge, setSentimentBadge] = useState(null);
 
   useEffect(() => {
@@ -78,6 +263,7 @@ export default function DecisionTab({ data }) {
   if (!decision) return <div style={{ color: 'var(--text-secondary)' }}>No decision data.</div>;
 
   const { score, label, color, explanations } = decision;
+  const { nextDayForecast, goalScore } = data;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -107,6 +293,27 @@ export default function DecisionTab({ data }) {
           </span>
         </div>
 
+        {/* ML pending banner */}
+        {mlPending && (
+          <div style={{
+            width: '100%',
+            padding: '10px 16px',
+            background: 'rgba(99,102,241,0.08)',
+            border: '1px solid rgba(99,102,241,0.25)',
+            borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 10,
+            fontSize: 12, color: 'var(--accent)',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, animation: 'spin 1.2s linear infinite' }}>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <span>{mlStatusLabel}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
+              Score updates when complete
+            </span>
+          </div>
+        )}
+
         <div style={{ textAlign: 'center' }}>
           <div
             style={{
@@ -120,7 +327,7 @@ export default function DecisionTab({ data }) {
             {label}
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6 }}>
-            Composite Score: {score.toFixed(1)} / 100
+            Composite Score: {score.toFixed(1)} / 100{mlPending ? ' · without ML' : ''}
           </div>
           {/* Sentiment badge — loads async, shown when ready */}
           <div style={{ marginTop: 10, minHeight: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -159,6 +366,12 @@ export default function DecisionTab({ data }) {
                          'Bearish Signal'}
         </div>
       </div>
+
+      {/* Next Day Forecast */}
+      <NextDayForecast forecast={nextDayForecast} mlProb={ml?.latestP ?? null} />
+
+      {/* Goal Assessment */}
+      <GoalScoreCard goalScore={goalScore} />
 
       {/* Disclaimer */}
       <div style={{

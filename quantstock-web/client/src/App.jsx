@@ -105,7 +105,7 @@ function ParamInput({ label, prefix, value, min, max, step, onChange }) {
 export default function App() {
   const {
     params, updateParam,
-    analysisData, loading, error,
+    analysisData, loading, mlStatus, error,
     searchResults, searchLoading,
     activeTab, setActiveTab,
     runAnalysis, runCsvAnalysis,
@@ -114,8 +114,9 @@ export default function App() {
   } = useAnalysis();
 
   const [pendingSymbol, setPendingSymbol] = useState(null);
+  const [aiOpen, setAiOpen] = useState(false);
   const fileRef = useRef(null);
-  const hasML = !!analysisData?.ml;
+  const hasML = !!analysisData?.ml || params.enableMl || !!mlStatus;
 
   const handleSymbolSelect = (sym) => {
     clearSearch();
@@ -207,6 +208,11 @@ export default function App() {
               {analysisData.name}
             </span>
             <DecisionBadge decision={analysisData.decision} />
+            {mlStatus && mlStatus !== 'done' && mlStatus !== 'error' && (
+              <span style={{ fontSize: 11, color: 'var(--accent)', fontStyle: 'italic', opacity: 0.8 }}>
+                ML running…
+              </span>
+            )}
           </div>
         )}
       </header>
@@ -216,7 +222,7 @@ export default function App() {
         <style>{`
           .hide-sm { display: none !important; }
           @media (max-width: 600px) { .params-bar { flex-wrap: wrap !important; } }
-          @media (max-width: 900px) { .main-with-sidebar { flex-direction: column !important; } .ai-sidebar-col { width: 100% !important; position: static !important; } }
+          @keyframes spin { to { transform: rotate(360deg); } }
         `}</style>
 
         {/* ─── Main content ─────────────────────────────────────────────────── */}
@@ -345,9 +351,9 @@ export default function App() {
 
           {/* Analysis result */}
           {analysisData && (
-            <div className="main-with-sidebar" style={{ display: 'flex', gap: 20, alignItems: 'flex-start', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeIn 0.3s ease' }}>
 
-            {/* ── Left: main analysis column ── */}
+            {/* ── Main analysis column ── */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Stock header row */}
@@ -450,24 +456,22 @@ export default function App() {
                 {activeTab === 'trade'     && <TradePlanTab data={analysisData} />}
                 {activeTab === 'range'     && <RangeLevelsTab data={analysisData} />}
                 {activeTab === 'markov'    && <MarkovTab data={analysisData} />}
-                {activeTab === 'ml'        && <MLTab data={analysisData} />}
-                {activeTab === 'decision'  && <DecisionTab data={analysisData} />}
+                {activeTab === 'ml'        && <MLTab data={analysisData} mlStatus={mlStatus} />}
+                {activeTab === 'decision'  && <DecisionTab data={analysisData} mlStatus={mlStatus} />}
                 {activeTab === 'sentiment' && <SentimentTab symbol={analysisData.symbol} />}
                 {activeTab === 'rawdata'   && <RawDataTab data={analysisData} />}
               </div>
             </div>
-            {/* ── Right: AI sidebar ── */}
-            <div className="ai-sidebar-col" style={{ width: 260, flexShrink: 0 }}>
-              <AiSidebar data={analysisData} />
-            </div>
-
             </div>
           )}
+
         </main>
       </div>
 
-      {/* Footer */}
+      {/* ── AI Chat Sidebar (fixed, slide in/out) ── */}
+      <AiSidebar data={analysisData} open={aiOpen} onToggle={() => setAiOpen(o => !o)} />
 
+      {/* Footer */}
       <footer style={{
         borderTop: '1px solid var(--border)',
         padding: '20px 24px',

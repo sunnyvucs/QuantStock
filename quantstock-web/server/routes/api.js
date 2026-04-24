@@ -3,6 +3,7 @@ import multer from 'multer';
 import { parse } from 'csv-parse/sync';
 
 import { searchStocks, fetchHistory, fetchInfo } from '../services/stockFetcher.js';
+import { parseCsvBars } from '../services/csvNormalizer.js';
 import { computeIndicators } from '../services/indicators.js';
 import { calcTradePlan } from '../services/tradePlan.js';
 import { calcRange } from '../services/rangeLevels.js';
@@ -11,6 +12,7 @@ import { calcTrend } from '../services/trendScore.js';
 import { finalDecision } from '../services/finalDecision.js';
 import { cagrProjection } from '../services/cagrProjection.js';
 import { trainAndEval } from '../services/mlModel.js';
+import { runHFModels, pingHF } from '../services/mlModelHF.js';
 import { fetchSentiment } from '../services/sentimentFetcher.js';
 import { runAiAnalysis } from '../services/aiAnalysis.js';
 
@@ -52,6 +54,55 @@ async function runAnalysis(bars, symbol, params, fundamentals = null) {
     markov ? markov.bias : 'Neutral',
     ml ? ml.latestP : null
   );
+
+  // ── Next-day forecast: synthesise Markov + Range signals ─────────────────
+  const nextDayForecast = (() => {
+    const expClose = markov?.expClose ?? null;
+    const expRet   = markov?.expRet   ?? null;
+    const bullP    = markov?.bullP    ?? null;
+    const bearP    = markov?.bearP    ?? null;
+    const expH     = rangeLevels?.expH ?? null;
+    const expL     = rangeLevels?.expL ?? null;
+    const pivot    = rangeLevels?.pivot ?? null;
+
+    // Direction label from Markov expected return
+    let direction = 'Unclear';
+    if (expRet != null) {
+      if (expRet > 0.15)       direction = 'Up';
+      else if (expRet < -0.15) direction = 'Down';
+      else                     direction = 'Flat';
+    }
+
+    // Agreement score: how many of the three signals agree on direction
+    const signals = [];
+    if (markov?.bias === 'Bullish') signals.push(1);
+    else if (markov?.bias === 'Bearish') signals.push(-1);
+    else signals.push(0);
+
+    if (rangeLevels?.bias === 'Bullish') signals.push(1);
+    else signals.push(-1);
+
+    const bullCount = signals.filter(s => s === 1).length;
+    const bearCount = signals.filter(s => s === -1).length;
+    let confidence = 'Low';
+    if (bullCount === signals.length || bearCount === signals.length) confidence = 'High';
+    else if (bullCount > bearCount || bearCount > bullCount) confidence = 'Medium';
+
+    return {
+      expClose: expClose != null ? +expClose.toFixed(2) : null,
+      expRet:   expRet   != null ? +expRet.toFixed(3)   : null,
+      direction,
+      bullP:    bullP    != null ? +bullP.toFixed(3)     : null,
+      bearP:    bearP    != null ? +bearP.toFixed(3)     : null,
+      expH:     expH     != null ? +expH.toFixed(2)      : null,
+      expL:     expL     != null ? +expL.toFixed(2)      : null,
+      pivot:    pivot    != null ? +pivot.toFixed(2)     : null,
+      confidence,
+      markovState:  markov?.current    ?? null,
+      markovBias:   markov?.bias       ?? null,
+      rangeBias:    rangeLevels?.bias  ?? null,
+    };
+  })();
 
   const history = enriched.map(b => ({
     date: b.date,
@@ -98,6 +149,7 @@ async function runAnalysis(bars, symbol, params, fundamentals = null) {
     decision,
     fundamentals,
     cagrData,
+    nextDayForecast,
   };
 }
 
@@ -152,20 +204,7 @@ router.post('/analyse-csv', upload.single('file'), async (req, res) => {
       trim: true,
     });
 
-    const bars = records.map(r => {
-      const row = Object.keys(r).reduce((acc, key) => {
-        acc[key.toLowerCase()] = r[key];
-        return acc;
-      }, {});
-      return {
-        date: row.date || row.datetime || '',
-        open: parseFloat(row.open) || 0,
-        high: parseFloat(row.high) || 0,
-        low: parseFloat(row.low) || 0,
-        close: parseFloat(row.close) || 0,
-        volume: parseFloat(row.volume) || 0,
-      };
-    }).filter(b => b.close > 0);
+    const bars = parseCsvBars(records);
 
     if (bars.length < 30) {
       return res.status(400).json({ error: 'CSV needs at least 30 valid rows' });
@@ -183,6 +222,136 @@ router.post('/analyse-csv', upload.single('file'), async (req, res) => {
   } catch (err) {
     console.error('/api/analyse-csv error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Fast analyse (no ML — returns immediately) ──────────────────────────────
+router.post('/analyse/fast', async (req, res) => {
+  const { symbol, investment, targetPct, slPct, atrMult } = req.body;
+  if (!symbol) return res.status(400).json({ error: 'symbol is required' });
+  try {
+    const [bars, fundamentals] = await Promise.all([
+      fetchHistory(symbol),
+      fetchInfo(symbol),
+    ]);
+    const result = await runAnalysis(bars, symbol, {
+      investment: Number(investment) || 100000,
+      targetPct: Number(targetPct) || 10,
+      slPct: Number(slPct) || 5,
+      atrMult: Number(atrMult) || 1.5,
+      enableMl: false,
+    }, fundamentals);
+    // Attach enriched bars so client can request ML separately
+    result._symbol = symbol;
+    res.json(result);
+  } catch (err) {
+    console.error('/api/analyse/fast error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── ML-only SSE stream ───────────────────────────────────────────────────────
+// Client sends the same bars array received from /analyse/fast
+router.post('/analyse/ml', async (req, res) => {
+  const { symbol, enableMl } = req.body;
+  if (!symbol) return res.status(400).json({ error: 'symbol is required' });
+  if (!(enableMl === true || enableMl === 'true')) {
+    return res.status(400).json({ error: 'ML analysis is disabled for this request' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    send('status', { message: 'Fetching price history…' });
+    const bars = await fetchHistory(symbol);
+    const enriched = computeIndicators(bars);
+
+    send('status', { message: 'Running ML models (RF · XGBoost · LR · LSTM)…' });
+    try {
+      const hfResult = await runHFModels(enriched);
+
+      send('result', {
+        ensemble:        hfResult.ensemble,
+        ensembleMetrics: hfResult.ensembleMetrics,
+        models:          hfResult.models,
+        modelMetrics:    hfResult.modelMetrics,
+        weights:         hfResult.weights,
+        modelsRun:       hfResult.modelsRun,
+        trainN:          hfResult.trainN,
+        testN:           hfResult.testN,
+      });
+    } catch (hfErr) {
+      console.warn('HF ML unavailable, falling back to built-in server model:', hfErr.message);
+      send('status', { message: 'External ensemble unavailable. Falling back to built-in server model...' });
+
+      const localMl = await trainAndEval(enriched);
+      if (!localMl) {
+        throw new Error('Built-in server model could not train on the available data');
+      }
+
+      send('result', {
+        name: localMl.name,
+        latestP: localMl.latestP,
+        acc: localMl.acc,
+        prec: localMl.prec,
+        rec: localMl.rec,
+        confMatrix: localMl.confMatrix,
+        featureImportances: localMl.featureImportances,
+        trainN: localMl.trainN,
+        testN: localMl.testN,
+        modelsRun: [localMl.name],
+      });
+    }
+  } catch (err) {
+    send('error', { message: err.message || 'ML analysis failed' });
+  } finally {
+    res.write('event: done\ndata: {}\n\n');
+    res.end();
+  }
+});
+
+// ─── HF ping ─────────────────────────────────────────────────────────────────
+router.get('/hf-ping', async (req, res) => {
+  const ok = await pingHF();
+  res.json({ available: ok });
+});
+
+// ─── AI Chat proxy (Ollama only — other providers called direct from browser) ──
+router.post('/ai-chat', async (req, res) => {
+  const { provider, model, messages } = req.body;
+  if (provider !== 'ollama') return res.status(400).json({ error: 'Only ollama provider uses server proxy' });
+  if (!messages?.length) return res.status(400).json({ error: 'messages required' });
+
+  try {
+    const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const ollamaModel = model || process.env.OLLAMA_MODEL || 'qwen3:4b';
+
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ollamaModel, messages, stream: false, options: { temperature: 0.4, num_predict: 2000 } }),
+      signal: AbortSignal.timeout(90_000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      return res.status(502).json({ error: `Ollama error ${response.status}: ${text}` });
+    }
+
+    const data = await response.json();
+    const raw = data.message?.content || data.message?.thinking || data.response || '';
+    const content = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    if (!content) return res.status(502).json({ error: 'Empty response from model' });
+    res.json({ content });
+  } catch (err) {
+    res.status(502).json({ error: err.message || 'Ollama unreachable' });
   }
 });
 

@@ -3,6 +3,12 @@ import MetricsRow from '../MetricsRow';
 import PriceChart from '../PriceChart';
 import InfoTooltip from '../ui/InfoTooltip';
 
+function fmtPctInt(v) {
+  const num = Number(v);
+  if (!Number.isFinite(num)) return '—';
+  return `${Math.round(num * 100)}%`;
+}
+
 function fmtNum(v, dec = 2) {
   if (v == null || isNaN(v)) return '—';
   return Number(v).toFixed(dec);
@@ -84,7 +90,7 @@ function KvRow({ label, value, tip }) {
 }
 
 export default function OverviewTab({ data }) {
-  const { lastBar, history, fundamentals } = data;
+  const { lastBar, history, fundamentals, targetFeasibility, userGoal } = data;
 
   const returns = [
     { label: '1D',  v: lastBar.ret1d,  full: '1 Day' },
@@ -184,6 +190,59 @@ export default function OverviewTab({ data }) {
           </div>
         )}
       </div>
+
+      {targetFeasibility?.summary && (
+        <div className="card" style={{ padding: '16px 18px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+            Goal Check
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+            {[
+              {
+                label: 'Target',
+                value: `${userGoal?.targetPct?.toFixed?.(1) ?? userGoal?.targetPct ?? '—'}%`,
+                sub: `on ₹${Number(userGoal?.investment || 0).toLocaleString('en-IN')}`,
+              },
+              {
+                label: 'Verdict',
+                value: targetFeasibility.summary.verdict,
+                sub: `${fmtPctInt(targetFeasibility.summary.sixMonthHitRate)} hit rate in 6M`,
+                color: targetFeasibility.summary.verdictColor,
+              },
+              {
+                label: 'Typical Hit Time',
+                value: targetFeasibility.summary.likelyMonths != null
+                  ? `${targetFeasibility.summary.likelyMonths.toFixed(1)} months`
+                  : 'Not reliable',
+                sub: 'median time when the target was reached',
+              },
+              {
+                label: 'Chance To Hit',
+                value: `${fmtPctInt(targetFeasibility.summary.twoMonthHitRate)} in 2M`,
+                sub: `${fmtPctInt(targetFeasibility.summary.oneMonthHitRate)} in 1M`,
+              },
+            ].map(item => (
+              <div key={item.label} style={{
+                padding: '10px 12px', background: 'var(--surface-2)',
+                borderRadius: 8, border: '1px solid var(--border)',
+              }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{item.label}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: item.color || 'var(--text-primary)' }}>{item.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>{item.sub}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.6 }}>
+            {targetFeasibility.summary.verdictText}
+            {' '}
+            {targetFeasibility.summary.oneMonthHitRate != null && (
+              <>
+                Historical view: about {fmtPctInt(targetFeasibility.summary.oneMonthHitRate)} of similar past entry windows hit the target within 1 month, and about {fmtPctInt(targetFeasibility.summary.twoMonthHitRate)} hit it within 2 months.
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

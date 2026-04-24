@@ -107,14 +107,14 @@ function priceVsMA(price, ma, label) {
 
 function markovExplain(markov) {
   if (!markov) return 'N/A';
-  const { current, upProb, downProb, bias } = markov;
+  const { current, bullP, bearP, bias } = markov;
   return [
     `Current Market State: ${current}`,
-    `Probability of Up next session: ${fmt(upProb * 100, 1)}%`,
-    `Probability of Down next session: ${fmt(downProb * 100, 1)}%`,
+    `Probability of Up next session: ${fmt(bullP * 100, 1)}%`,
+    `Probability of Down next session: ${fmt(bearP * 100, 1)}%`,
     `Model Bias: ${bias}`,
     `Plain English: Based on historical price movement patterns, if the stock is in a "${current}" state today, ` +
-    `it has historically moved UP ${fmt(upProb * 100, 1)}% of the time in the next session. ` +
+    `it has historically moved UP ${fmt(bullP * 100, 1)}% of the time in the next session. ` +
     (bias === 'Bullish' ? 'This is a positive signal.' : bias === 'Bearish' ? 'This is a cautionary signal.' : 'This is a neutral signal.'),
   ].join('\n  ');
 }
@@ -136,7 +136,7 @@ function sep(char = '-', len = 70) {
 }
 
 export function generateReportText(data) {
-  const { name, symbol, price, lastBar, tradePlan: tp, cagrData, markov, rangeLevels: rl, trend, ml, decision, fundamentals } = data;
+  const { name, symbol, price, lastBar, tradePlan: tp, cagrData, markov, rangeLevels: rl, trend, ml, decision, fundamentals, targetFeasibility, userGoal } = data;
   const now = new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'short' });
   const lines = [];
 
@@ -271,9 +271,33 @@ export function generateReportText(data) {
     line('Trade plan data not available.');
   }
 
+  if (targetFeasibility?.summary) {
+    h1('8. Target Feasibility Check');
+    line(`Investor Goal: Invest ${fmtINR(userGoal?.investment, 0)} and target ${fmt(userGoal?.targetPct, 1)}% return`);
+    line(`Required Profit: ${fmtINR(userGoal?.targetProfit, 0)} | Target Price: ${fmtINR(targetFeasibility.currentTargetPrice)}`);
+    line('');
+    line(`Verdict: ${targetFeasibility.summary.verdict}`);
+    line(`Historical Confidence: ${targetFeasibility.confidenceScore}/100`);
+    line(`Interpretation: ${targetFeasibility.summary.verdictText}`);
+    line('');
+    line('Historical hit rates by horizon:');
+    targetFeasibility.horizons.forEach(h => {
+      line(`  ${h.label.padEnd(8)}: ${fmt(h.hitRate * 100, 1)}% hit rate | median hit time ${h.medianMonthsToHit != null ? `${fmt(h.medianMonthsToHit, 1)} months` : 'N/A'} | median drawdown ${h.medianDrawdownPct != null ? `${fmt(h.medianDrawdownPct, 1)}%` : 'N/A'}`);
+    });
+    line('');
+    line('Plain English:');
+    if (targetFeasibility.summary.verdict === 'Realistic') {
+      line('  Historically, this target has been achievable often enough to be treated as a reasonable expectation, though not a guarantee.');
+    } else if (targetFeasibility.summary.verdict === 'Borderline') {
+      line('  Historically, this target has been achieved sometimes, but not consistently enough to assume it will happen quickly.');
+    } else {
+      line('  Historically, this target has been difficult for this stock to deliver within the shorter horizons. It may require more time or a different entry.');
+    }
+  }
+
   // 8. CAGR
   if (cagrData) {
-    h1('8. Historical Growth Projection (CAGR)');
+    h1('9. Historical Growth Projection (CAGR)');
     const cagr = cagrData.cagr;
     line(`Historical CAGR: ${cagr != null ? `${(cagr * 100).toFixed(1)}% per year` : 'N/A'}`);
     line('');
@@ -288,7 +312,7 @@ export function generateReportText(data) {
         line('  This stock has DECLINED historically. Exercise extra caution.');
       line('');
       line('Projected Prices (if historical CAGR continues — this is a statistical estimate, NOT a guarantee):');
-      const horizons = [['1M', '1 Month'], ['3M', '3 Months'], ['6M', '6 Months'], ['12M', '1 Year'], ['36M', '3 Years']];
+      const horizons = [['1M', '1 Month'], ['2M', '2 Months'], ['3M', '3 Months'], ['6M', '6 Months'], ['12M', '1 Year'], ['36M', '3 Years']];
       horizons.forEach(([key, label]) => {
         const pp = cagrData.projections?.[key];
         if (pp != null) {
@@ -300,7 +324,7 @@ export function generateReportText(data) {
   }
 
   // 9. Fundamentals
-  h1('9. Company Fundamentals');
+  h1('10. Company Fundamentals');
   if (fundamentals) {
     line(`Market Cap: ${fmtMktCap(fundamentals.marketCapCr ?? fundamentals.marketCap, !!fundamentals.marketCapCr)}`);
     line('  Market cap is the total value the stock market puts on this company.');
@@ -317,24 +341,52 @@ export function generateReportText(data) {
     line('Fundamental data available only for NSE/BSE stocks (not CSV uploads).');
   }
 
-  // 10. ML Model
+  // 10. ML Ensemble Model
   if (ml) {
-    h1('10. Machine Learning Model (Random Forest)');
-    line(`Model: ${ml.name}`);
-    line(`Up Probability for Next Session: ${(ml.latestP * 100).toFixed(1)}%`);
-    line(`Prediction: ${ml.latestP > 0.5 ? 'Bullish' : 'Bearish'}`);
+    h1('11. Machine Learning Ensemble Model (RF + XGBoost + LR + LSTM)');
+    line('Important scope note:');
+    line('  This ML model is a NEXT-TRADING-SESSION direction model.');
+    line('  It estimates whether the next session may close higher or lower.');
+    line('  It does NOT directly predict whether your investment target will be reached in 1 month, 2 months, or 6 months.');
+    line('  Your investment amount affects profit/loss sizing, not the ML probability itself.');
+    line('  Your target return and likely time-to-target are answered by the Target Feasibility section above.');
     line('');
-    line('What this means:');
-    line(`  The ML model has analysed historical price patterns and technical indicators.`);
-    line(`  It estimates a ${(ml.latestP * 100).toFixed(1)}% probability that the stock will close HIGHER tomorrow.`);
+    line(`Ensemble UP Probability: ${fmt(ml.latestP * 100, 1)}% → ${ml.latestP > 0.5 ? 'Bullish' : 'Bearish'}`);
+    line('');
     if (ml.latestP > 0.65)
-      line('  This is a notably STRONG bullish probability.');
+      line('  Interpretation: STRONG bullish signal from the ML ensemble.');
     else if (ml.latestP > 0.5)
-      line('  This is a MILDLY bullish probability — slightly more likely to go up than down.');
+      line('  Interpretation: Mildly bullish — slightly more likely to close up tomorrow.');
     else if (ml.latestP > 0.35)
-      line('  This is a MILDLY bearish probability — slightly more likely to go down than up.');
+      line('  Interpretation: Mildly bearish — slightly more likely to close down tomorrow.');
     else
-      line('  This is a notably STRONG bearish probability.');
+      line('  Interpretation: STRONG bearish signal from the ML ensemble.');
+
+    if (ml.acc != null || ml.prec != null || ml.rec != null) {
+      line('');
+      line('Ensemble Performance Metrics (on held-out test data):');
+      line(`  Accuracy  : ${ml.acc  != null ? fmt(ml.acc  * 100, 1) + '%' : 'N/A'}`);
+      line(`  Precision : ${ml.prec != null ? fmt(ml.prec * 100, 1) + '%' : 'N/A'}`);
+      line(`  Recall    : ${ml.rec  != null ? fmt(ml.rec  * 100, 1) + '%' : 'N/A'}`);
+      if (ml.trainN != null) line(`  Training samples: ${ml.trainN} | Test samples: ${ml.testN ?? 'N/A'}`);
+    }
+
+    if (ml.models && Object.keys(ml.models).length) {
+      line('');
+      line('Per-Model Probabilities:');
+      Object.entries(ml.models).forEach(([name, prob]) => {
+        const metrics = ml.modelMetrics?.[name];
+        const acc  = metrics?.acc  != null ? ` | Acc ${fmt(metrics.acc  * 100, 1)}%` : '';
+        const prec = metrics?.prec != null ? ` | Prec ${fmt(metrics.prec * 100, 1)}%` : '';
+        const rec  = metrics?.rec  != null ? ` | Rec ${fmt(metrics.rec  * 100, 1)}%` : '';
+        line(`  ${name.toUpperCase().padEnd(7)}: ${fmt(prob * 100, 1)}% UP${acc}${prec}${rec}`);
+      });
+    }
+
+    if (ml.weights && Object.keys(ml.weights).length) {
+      line('');
+      line(`Ensemble Weights: ${Object.entries(ml.weights).map(([k, v]) => `${k.toUpperCase()} ${(v * 100).toFixed(0)}%`).join(' | ')}`);
+    }
   }
 
   // Footer

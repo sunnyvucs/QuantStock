@@ -53,11 +53,11 @@ const icons = {
 
 const TABS = [
   { id: 'overview',    label: 'Overview' },
-  { id: 'trade',       label: 'Trade Calculator' },
-  { id: 'range',       label: 'Range Levels' },
+  { id: 'trade',       label: 'Trade' },
+  { id: 'range',       label: 'Range' },
   { id: 'markov',      label: 'Markov' },
-  { id: 'ml',          label: 'Statistical Model' },
-  { id: 'decision',    label: 'Signal Summary' },
+  { id: 'ml',          label: 'ML Model' },
+  { id: 'decision',    label: 'Signal' },
   { id: 'sentiment',   label: 'Sentiment' },
   { id: 'rawdata',     label: 'Raw Data' },
 ];
